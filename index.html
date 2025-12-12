@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AAHA Guidelines for KAHIS EMR Standard (Virtual Tour)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- 3D & Animation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <style>
+        :root {
+            /* Kasetsart University inspired Theme Colors */
+            --ku-green-dark: #004526;
+            --ku-green-main: #006b38;
+            --ku-gold: #cfa052;
+            --ku-gold-light: #e6c994;
+            --text-light: #f0f4f1;
+            --text-dark: #1a1a1a;
+            --bg-dark: #0a2215;
+            --bg-card: rgba(255, 255, 255, 0.07);
+            --danger: #d9534f;
+            --success: #5cb85c;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            /* Disable native scroll snap as we will control it via GSAP/3D */
+            overflow-x: hidden;
+            background: #000;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.6;
+            overflow-x: hidden;
+            margin: 0;
+        }
+
+        /* Typography */
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            text-align: center;
+            color: var(--ku-gold);
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 2.2rem;
+            color: var(--ku-gold-light);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--ku-green-main);
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+
+        .subtext {
+            font-size: 1.2rem;
+            color: var(--ku-gold-light);
+            display: block;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+
+        p,
+        li {
+            font-size: 1.05rem;
+            margin-bottom: 1rem;
+            color: #d0dcd5;
+        }
+
+        strong {
+            color: var(--ku-gold);
+        }
+
+        /* Layout & Structure */
+        section {
+            min-height: 100vh;
+            padding: 80px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-bottom: none;
+
+            /* Virtual Tour Layout */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            opacity: 0;
+            pointer-events: none;
+            /* Let clicks pass through when hidden */
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-out;
+            z-index: 10;
+        }
+
+        section.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        section.hidden-up {
+            transform: translateY(-50px) scale(0.9);
+        }
+
+        section.hidden-down {
+            transform: translateY(50px) scale(0.9);
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+            display: block;
+        }
+
+        /* HUD / Hologram Styling for Containers */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(10, 34, 21, 0.7);
+            /* Semi-transparent panel */
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(207, 160, 82, 0.3);
+            box-shadow: 0 0 30px rgba(0, 69, 38, 0.5);
+            /* Add scanline effect */
+            background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-50 {
+            margin-bottom: 50px;
+        }
+
+        /* --- Navigation Buttons --- */
+        .nav-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            background: rgba(0, 69, 38, 0.8);
+            border: 1px solid var(--ku-gold);
+            color: var(--ku-gold);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-btn:hover {
+            background: var(--ku-gold);
+            color: var(--ku-green-dark);
+            transform: scale(1.1);
+        }
+
+        .scroll-indicator {
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .scroll-indicator:hover {
+            transform: translateY(5px);
+            color: var(--ku-gold);
+        }
+
+        /* --- Components --- */
+
+        /* Password Unlock UI */
+        .locked-container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid var(--ku-green-main);
+            display: inline-block;
+        }
+
+        .pass-input {
+            padding: 12px 20px;
+            border-radius: 30px;
+            border: 2px solid var(--ku-gold);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            outline: none;
+            font-size: 1rem;
+            text-align: center;
+            width: 250px;
+            margin-right: 10px;
+            transition: 0.3s;
+        }
+
+        .pass-input:focus {
+            background: rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 10px rgba(207, 160, 82, 0.3);
+        }
+
+        .btn-unlock {
+            padding: 12px 25px;
+            border-radius: 30px;
+            background: var(--ku-gold);
+            color: var(--ku-green-dark);
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+
+        .btn-unlock:hover {
+            transform: translateY(-2px);
+            background: white;
+        }
+
+        /* Expandable Cards */
+        .expandable-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            width: 100%;
+        }
+
+        .expand-card {
+            background: var(--bg-card);
+            border: 1px solid var(--ku-green-main);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .expand-header {
+            padding: 20px;
+            background: rgba(0, 107, 56, 0.2);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .expand-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s;
+            font-size: 1.5rem;
+            color: var(--ku-gold);
+        }
+
+        .expand-content {
+            max-height: 0;
+            overflow: hidden;
+            padding: 0 20px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .expand-card.active .expand-content {
+            max-height: 500px;
+            padding: 20px;
+            border-top: 1px solid var(--ku-green-main);
+        }
+
+        .expand-card.active .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Tooltip Mockup */
+        .mockup-container {
+            background: #f4f7f6;
+            color: #333;
+            padding: 30px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 900px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .mockup-header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--ku-green-dark);
+            font-weight: bold;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--ku-green-main);
+        }
+
+        .aaha-tooltip {
+            position: relative;
+            display: inline-block;
+            border-bottom: 2px dashed var(--ku-gold);
+            cursor: help;
+            padding: 5px;
+            background: #fff;
+            border: 1px solid #ccc;
+            width: 100%;
+            font-family: monospace;
+            color: #555;
+        }
+
+        .aaha-tooltip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--ku-green-dark);
+            color: var(--ku-gold-light);
+            padding: 10px 15px;
+            border-radius: 5px;
+            width: 280px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            font-family: 'Sarabun', sans-serif;
+            font-size: 0.9rem;
+            z-index: 100;
+            white-space: normal;
+            text-align: left;
+        }
+
+        .aaha-tooltip:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: var(--ku-green-dark) transparent transparent transparent;
+        }
+
+        /* Modal / Lightbox */
+        .modal-trigger-btn {
+            background: transparent;
+            border: 2px solid var(--ku-gold);
+            color: var(--ku-gold);
+            padding: 10px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.3s;
+            margin-top: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-trigger-btn:hover {
+            background: var(--ku-gold);
+            color: var(--ku-green-dark);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--bg-dark);
+            border: 1px solid var(--ku-gold);
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--ku-gold);
+        }
+
+        /* Simulations */
+        .simulation-box {
+            background: white;
+            color: #333;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .sim-header {
+            background: var(--ku-green-main);
+            color: white;
+            padding: 10px 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .sim-body {
+            padding: 20px;
+            background: #f4f7f6;
+        }
+
+        .audit-log-entry {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            font-family: monospace;
+            font-size: 0.95rem;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .audit-meta {
+            font-size: 0.85rem;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .audit-data.modified {
+            text-decoration: line-through;
+            color: var(--danger);
+        }
+
+        .audit-data.new {
+            color: var(--success);
+            font-weight: bold;
+            background: rgba(92, 184, 92, 0.1);
+            padding: 5px;
+        }
+
+        .mpl-comparison {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .mpl-card {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .mpl-card.bad {
+            border-top: 4px solid var(--danger);
+        }
+
+        .mpl-card.good {
+            border-top: 4px solid var(--success);
+            background: rgba(0, 107, 56, 0.2);
+        }
+
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            color: white;
+        }
+
+        /* Download Button */
+        .btn-download {
+            background: var(--ku-gold);
+            color: var(--ku-green-dark);
+            text-decoration: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(207, 160, 82, 0.3);
+            transition: 0.3s;
+            animation: fadeIn 0.5s;
+        }
+
+        .btn-download:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(207, 160, 82, 0.5);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-controls {
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .nav-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .pass-input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            .btn-unlock {
+                width: 100%;
+                margin-left: 0;
+            }
+        }
+
+        @keyframes shake {
+            0% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            50% {
+                transform: translateX(5px);
+            }
+
+            75% {
+                transform: translateX(-5px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 3D Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Scroll Spacer -->
+    <div id="scroll-spacer"
+        style="height: 10000px; width: 1px; position: absolute; top: 0; left: 0; pointer-events: none; z-index: -1;">
+    </div>
+
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="scrollToPrev()">▲</button>
+        <button class="nav-btn" onclick="scrollToNext()">▼</button>
+    </div>
+
+    <section class="page-section" id="sec-1">
+        <div class="container text-center">
+            <h4 style="color: var(--ku-green-main); letter-spacing: 2px; margin-bottom: 10px;">VETERINARY TEACHING
+                HOSPITAL KASETSART UNIVERSITY</h4>
+            <h1>AAHA Guidelines for <strong style="color: var(--success);">KAHIS EMR</strong></h1>
+            <span class="subtext">(Kaset Animal Hospital Information System Electronic Medical Record)</span>
+            <p style="margin-top: 30px; max-width: 800px; margin-left: auto; margin-right: auto; font-size: 1.2rem;">
+                เจาะลึกข้อกำหนดมาตรฐานระบบเวชระเบียนสัตวแพทย์ระดับสากล (AAHA)<br>
+                เพื่อเป็นแนวทางในการพัฒนาและยกระดับระบบ <b>KAHIS</b> สู่มาตรฐานสากล
+            </p>
+
+            <div
+                style="margin-top: 25px; color: var(--ku-gold-light); font-size: 0.95rem; font-weight: 500; border: 1px solid var(--ku-gold); padding: 8px 20px; display: inline-block; border-radius: 20px;">
+                Prepared by Nipon W. DVM @ 11 Dec 2025
+            </div>
+
+            <div style="margin-top: 40px;" class="scroll-indicator" onclick="scrollToNext()">
+                <p style="font-size: 0.9rem; color: #888;">เลื่อนลงเพื่อศึกษาข้อมูลเชิงลึก ▼</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="sec-2">
+        <div class="container">
+            <h2>1. หลักการพื้นฐาน (Foundation Principles)</h2>
+            <p class="mb-50 text-center">
+                ระบบ EMR ตามมาตรฐาน AAHA มิใช่เพียงการจัดเก็บข้อมูลแบบดิจิทัล
+                แต่ต้องเป็นเครื่องมือที่สนับสนุนกระบวนการคิดและทำงานอย่างเป็นระบบของสัตวแพทย์ (Clinical Workflow
+                Support)
+            </p>
+
+            <div class="expandable-grid">
+                <div class="expand-card" onclick="toggleExpand(this)">
+                    <div class="expand-header">
+                        <h3>POMR: Problem-Oriented Medical Record</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="expand-content">
+                        <p><b>เวชระเบียนที่ยึดปัญหาเป็นศูนย์กลาง:</b> โครงสร้างข้อมูลต้องถูกจัดระเบียบตาม "ปัญหาสุขภาพ"
+                            ของผู้ป่วย ไม่ใช่เพียงการบันทึกตามลำดับเวลา (Chronological) เพียงอย่างเดียว</p>
+                        <ul>
+                            <li>ระบบต้องเอื้อให้สัตวแพทย์เชื่อมโยงการตรวจวินิจฉัยและการรักษากลับไปยังปัญหาหลัก (Master
+                                Problem) ได้เสมอ</li>
+                            <li>ช่วยให้ทีมสัตวแพทย์ที่มารับช่วงต่อเข้าใจบริบทของเคสได้ทันทีโดยไม่ต้องอ่านประวัติย้อนหลังทั้งหมด
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expand-card" onclick="toggleExpand(this)">
+                    <div class="expand-header">
+                        <h3>Structured SOAP Format</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="expand-content">
+                        <p>การบันทึกข้อมูลการตรวจรักษา (Encounter Notes) ต้องรองรับโครงสร้างมาตรฐาน SOAP
+                            อย่างชัดเจนและแยกส่วนกัน:</p>
+                        <ul>
+                            <li><b>S (Subjective):</b> ข้อมูลจากเจ้าของ, ประวัติการเจ็บป่วย (History)</li>
+                            <li><b>O (Objective):</b> ผลการตรวจร่างกาย (Physical Exam) ต้องระบุได้ว่าระบบใดปกติ/ผิดปกติ,
+                                ผล Lab, ผล X-ray</li>
+                            <li><b>A (Assessment):</b> การประเมิน, การวินิจฉัยแยกโรค (Differential Dx),
+                                การวินิจฉัยขั้นสุดท้าย</li>
+                            <li><b>P (Plan):</b> แผนการรักษา, การจ่ายยา, การนัดหมาย, คำแนะนำ</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="sec-3">
+        <div class="container">
+            <h2>2. ข้อกำหนดข้อมูลบังคับ (Mandatory Content)</h2>
+            <p class="mb-50 text-center">
+                เพื่อให้ผ่านการรับรอง AAHA ระบบ KAHIS EMR จำเป็นต้องบังคับให้มีข้อมูลเหล่านี้ครบถ้วน
+                <br><small
+                    style="color: var(--ku-gold);">(ลองเลื่อนเมาส์ไปชี้ที่ช่องกรอกข้อมูลด้านล่างเพื่อดูข้อกำหนดเฉพาะ)</small>
+            </p>
+
+            <div class="mockup-container">
+                <div class="mockup-header">
+                    :: KAHIS EMR - Patient Encounter Mockup ::
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Patient Info (ข้อมูลสัตว์ป่วย)</label>
+                        <div class="aaha-tooltip"
+                            data-tip="ข้อกำหนด: ต้องระบุ ชนิดสัตว์ (Species), สายพันธุ์ (Breed), เพศ (Sex), สถานะทำหมัน (Neutered status), สี/ตำหนิ, วันเกิด/อายุที่ถูกต้อง, และหมายเลขไมโครชิป (ถ้ามี)">
+                            [Signalment Data Block]
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Client Info (ข้อมูลเจ้าของ)</label>
+                        <div class="aaha-tooltip"
+                            data-tip="ข้อกำหนด: ชื่อ-นามสกุลตามกฎหมาย, ที่อยู่ปัจจุบัน, หมายเลขโทรศัพท์ที่ติดต่อได้ และที่สำคัญคือ 'ผู้ติดต่อฉุกเฉิน' (Emergency Contact)">
+                            [Owner & Contact Details]
+                        </div>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Physical Examination (ผลการตรวจร่างกาย)</label>
+                        <div class="aaha-tooltip"
+                            data-tip="ข้อกำหนด: ต้องบันทึกผลการตรวจครบทุกระบบ (Body Systems) โดยต้องระบุชัดเจนว่า 'Normal' (ปกติ) หรือ 'Abnormal' (ผิดปกติ) หากผิดปกติต้องมีรายละเอียดประกอบ">
+                            [Systematic Exam Findings: Normal/Abnormal]
+                        </div>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Treatment & Medication (การรักษา/จ่ายยา)</label>
+                        <div class="aaha-tooltip"
+                            data-tip="ข้อกำหนด (เคร่งครัด): การบันทึกยาต้องประกอบด้วย 1.ชื่อยา 2.ความเข้มข้น (Strength) 3.ขนาดยาที่ใช้ (Dose, mg/kg) 4.วิถีทาง (Route) 5.ความถี่ และ 6.จำนวนที่จ่าย">
+                            [Rx: Drug Name, Strength, Dosage, Route, Frequency]
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Client Communication Log</label>
+                        <div class="aaha-tooltip"
+                            data-tip="สำคัญมากทางกฎหมาย: ต้องมีส่วนบันทึกสิ่งที่ได้สื่อสารกับเจ้าของ เช่น การแจ้งความเสี่ยง, การแจ้งประเมินค่าใช้จ่าย, หรือกรณีเจ้าของปฏิเสธการรักษา (Declined care)">
+                            [บันทึกการสนทนา/แจ้งข้อมูลสำคัญ]
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Consent Forms</label>
+                        <div class="aaha-tooltip"
+                            data-tip="ต้องรองรับ Electronic Signature สำหรับใบยินยอมต่างๆ (ผ่าตัด, วางยา) และเก็บเป็นส่วนหนึ่งของเวชระเบียนถาวร">
+                            [Electronic Signature Capture]
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="sec-4">
+        <div class="container">
+            <h2>3. มาตรฐานระบบและความปลอดภัย (System & Security)</h2>
+            <p class="mb-50 text-center">ข้อกำหนดด้านไอทีที่จำเป็นต่อความน่าเชื่อถือของข้อมูล (Data Integrity)
+                และความปลอดภัย</p>
+
+            <div class="expandable-grid">
+                <div class="expand-card" onclick="toggleExpand(this)">
+                    <div class="expand-header">
+                        <h3>Individual User Access</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="expand-content">
+                        <ul>
+                            <li><b>ห้ามใช้บัญชีส่วนกลาง (No Generic Logins):</b> ผู้ใช้งานทุกคน (สัตวแพทย์, พยาบาล,
+                                เจ้าหน้าที่) ต้องมี Username/Password ส่วนบุคคล</li>
+                            <li>เพื่อระบุตัวตนผู้กระทำการบันทึกข้อมูลได้ชัดเจนตามหลักกฎหมาย</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expand-card" onclick="toggleExpand(this)">
+                    <div class="expand-header">
+                        <h3>Data Backup Strategy</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="expand-content">
+                        <ul>
+                            <li>ต้องมีการสำรองข้อมูล (Backup) อย่างสม่ำเสมอ (แนะนำรายวัน)</li>
+                            <li><b>ข้อบังคับ:</b> ต้องมีการสำรองข้อมูลไว้สถานที่อื่นนอกโรงพยาบาล (Off-site)
+                                หรือใช้บริการ Cloud Backup ที่ได้มาตรฐาน เพื่อป้องกันกรณีภัยพิบัติกับเซิร์ฟเวอร์หลัก
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expand-card" onclick="toggleExpand(this)">
+                    <div class="expand-header">
+                        <h3>Integrated Diagnostics</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="expand-content">
+                        <ul>
+                            <li>ผลการตรวจทางห้องปฏิบัติการ (Lab Results) และภาพวินิจฉัย (Diagnostic Imaging)
+                                ต้องถูกเชื่อมโยงและจัดเก็บรวมอยู่ในเวชระเบียนของผู้ป่วยรายนั้นๆ</li>
+                            <li>รองรับมาตรฐานการเชื่อมต่อ เช่น DICOM สำหรับภาพถ่ายรังสี หรือ HL7 สำหรับเครื่องมือแล็บ
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="sec-5" style="background: rgba(0,0,0,0.2);">
+        <div class="container">
+            <h2>4. จุดชี้วัดสำคัญ: Part 1</h2>
+            <p class="mb-50 text-center" style="font-size: 1.3rem; color: var(--ku-gold-light);">
+                หากระบบ KAHIS ขาด 2 ฟังก์ชันนี้ จะ<b>ไม่ผ่าน</b>การประเมินมาตรฐาน AAHA ในส่วนเวชระเบียน
+            </p>
+
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: var(--ku-gold);">4.1 Audit Trail: พยานหลักฐานทางดิจิทัล</h3>
+                <p>เวชระเบียนถือเป็นเอกสารทางกฎหมาย ระบบต้องรับประกันความถูกต้องน่าเชื่อถือ (Data Integrity)
+                    โดยการบันทึกประวัติการแก้ไขทุกครั้ง</p>
+
+                <div class="simulation-box" style="max-width: 800px; margin: 0 auto;">
+                    <div class="sim-header">
+                        <span>KAHIS Simulation: Audit Log View</span>
+                        <span>Case ID: K67-11234</span>
+                    </div>
+                    <div class="sim-body" id="auditSim">
+                        <div class="audit-log-entry">
+                            <div class="audit-meta">
+                                <span>User: Dr.Vipa (Vet ID: V055)</span>
+                                <span>Timestamp: 2024-05-20 09:30:15 (Server Time)</span>
+                                <span>Action: Create</span>
+                            </div>
+                            <div class="audit-data">
+                                P: จ่ายยา Amoxicillin 250mg, 1 tab, PO, bid (จำนวน 14 เม็ด)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center" style="margin-top: 20px;">
+                    <button id="auditBtn" class="modal-trigger-btn" onclick="runAuditSim()">
+                        ▶ จำลองเหตุการณ์: เมื่อหมอกลับมาแก้ไขข้อมูลภายหลัง
+                    </button>
+                </div>
+                <ul style="margin-top: 30px; display: inline-block; text-align: left;">
+                    <li><strong>ข้อกำหนด AAHA:</strong> เมื่อมีการแก้ไข ข้อมูลเดิมต้องไม่ถูกลบทิ้งถาวร
+                        แต่ต้องถูกเก็บไว้และระบุสถานะว่าถูกแก้ไข</li>
+                    <li>ต้องระบุได้ว่า "ใคร" (Who) เป็นคนแก้ และ "เมื่อไหร่" (When - ใช้เวลา Server เท่านั้น)</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="sec-6" style="background: rgba(0,0,0,0.2);">
+        <div class="container">
+            <h2>4. จุดชี้วัดสำคัญ: Part 2</h2>
+            <p class="mb-50 text-center" style="font-size: 1.3rem; color: var(--ku-gold-light);">
+                Master Problem List (MPL) หัวใจของการรักษาระยะยาว
+            </p>
+
+            <div>
+                <h3 style="color: var(--ku-gold);">4.2 Master Problem List (MPL)</h3>
+                <p>ระบบต้องมีหน้าสรุป "รายการปัญหาหลัก" แยกต่างหาก เพื่อให้เห็นภาพรวมสุขภาพองค์รวมในระยะยาว</p>
+
+                <div class="mpl-comparison">
+                    <div class="mpl-card bad">
+                        <h4>❌ ระบบทั่วไป (Chronological Notes)</h4>
+                        <p style="font-size: 0.9rem;">การบันทึกแบบรายวัน ทำให้ข้อมูลกระจัดกระจาย
+                            ยากต่อการติดตามโรคเรื้อรัง</p>
+                        <div
+                            style="background: #fff; color: #555; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.85rem;">
+                            [10 ม.ค. 67] มาด้วยอาการอาเจียน...<br>
+                            [12 ก.พ. 67] ตรวจเลือดพบค่าไตสูง...<br>
+                            [15 มี.ค. 67] ติดตามอาการโรคไต...
+                        </div>
+                    </div>
+
+                    <div class="mpl-card good">
+                        <h4>✅ มาตรฐาน AAHA (MPL View)</h4>
+                        <p style="font-size: 0.9rem;">หน้า Dashboard สรุปปัญหาทั้งหมด พร้อมระบุสถานะปัจจุบัน</p>
+                        <table
+                            style="width: 100%; background: #fff; color: #333; border-radius: 5px; overflow: hidden; font-size: 0.9rem;">
+                            <thead style="background: var(--ku-green-dark); color: white;">
+                                <tr>
+                                    <th style="padding: 8px;">Problem/Diagnosis</th>
+                                    <th style="padding: 8px;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 8px; border-bottom: 1px solid #eee;">Chronic kidney disease
+                                        Stage 2</td>
+                                    <td style="padding: 8px; border-bottom: 1px solid #eee;"><span class="status-badge"
+                                            style="background: var(--danger);">Active</span></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; border-bottom: 1px solid #eee;">Atopic dermatitis</td>
+                                    <td style="padding: 8px; border-bottom: 1px solid #eee;"><span class="status-badge"
+                                            style="background: var(--danger);">Active</span></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px;">Acute gastritis (Jan 2024)</td>
+                                    <td style="padding: 8px;"><span class="status-badge"
+                                            style="background: var(--success);">Resolved</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="sec-7">
+        <div class="container">
+            <h2>5. แนวทางใหม่ (2024-2025 Modern Guidelines)</h2>
+            <p class="mb-50 text-center">AAHA ได้ปรับปรุงมาตรฐานให้สอดคล้องกับเทคโนโลยีและการทำงานในปัจจุบัน</p>
+
+            <div class="expandable-grid">
+                <div class="expand-card" onclick="toggleExpand(this)">
+                    <div class="expand-header">
+                        <h3>Telehealth & Connected Care</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="expand-content">
+                        <p>หากมีการให้บริการปรึกษาทางไกล (Telemedicine):</p>
+                        <ul>
+                            <li>ระบบ EMR ต้องสามารถบันทึกข้อมูลการสนทนา รูปภาพ
+                                หรือวิดีโอที่ใช้ในการวินิจฉัยลงในประวัติผู้ป่วยได้เสมือนการมาตรวจปกติ</li>
+                            <li>ต้องมีมาตรการรักษาความเป็นส่วนตัวของข้อมูล (Data Privacy)
+                                ที่เข้มงวดสำหรับข้อมูลดิจิทัลเหล่านี้</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expand-card" onclick="toggleExpand(this)">
+                    <div class="expand-header">
+                        <h3>Referral Standards (การส่งต่อ)</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="expand-content">
+                        <p>เพื่อประสิทธิภาพในการส่งต่อผู้ป่วยไปยังโรงพยาบาลเฉพาะทาง:</p>
+                        <ul>
+                            <li>ระบบต้องสามารถสร้างรายงานสรุปประวัติ (Referral Summary) ได้อย่างรวดเร็ว</li>
+                            <li>ต้องสามารถ Export ข้อมูลสำคัญ (ผล Lab, X-ray, MPL, ยาที่ใช้อยู่)
+                                ในรูปแบบที่สถานพยาบาลปลายทางสามารถนำไปใช้ต่อได้ง่าย</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="sec-8">
+        <div class="container">
+            <h2>6. มาตรฐานคำศัพท์วินิจฉัย (Diagnostic Terms)</h2>
+            <p class="text-center">
+                การแก้ปัญหา "Garbage In, Garbage Out" (ข้อมูลขยะ) โดยการบังคับใช้คำศัพท์มาตรฐานแทนการพิมพ์อิสระ (Free
+                Text)
+            </p>
+            <p class="text-center mb-50">
+                AAHA ใช้มาตรฐาน <b>SNOMED-CT (Veterinary Extension)</b> ซึ่งเป็นชุดคำศัพท์ย่อยประมาณ 5,000
+                คำที่คัดสรรมาสำหรับสัตวแพทย์
+            </p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px;">
+                <div
+                    style="background: rgba(217, 83, 79, 0.1); padding: 20px; border-radius: 8px; border-left: 4px solid var(--danger);">
+                    <h4>❌ ปัญหาของ Free Text</h4>
+                    <ul>
+                        <li>หมอ 3 คน พิมพ์ชื่อโรคเดียวกัน 3 แบบ (เช่น CKD, Renal Failure, โรคไต)</li>
+                        <li>ระบบคอมพิวเตอร์มองว่าเป็นคนละโรค</li>
+                        <li>ไม่สามารถวิเคราะห์สถิติข้อมูลได้</li>
+                        <li>ระบบแจ้งเตือนการแพ้ยา หรือยาที่ขัดแย้งกันไม่ทำงาน</li>
+                    </ul>
+                </div>
+                <div
+                    style="background: rgba(92, 184, 92, 0.1); padding: 20px; border-radius: 8px; border-left: 4px solid var(--success);">
+                    <h4>✅ ประโยชน์ของ SNOMED Subset</h4>
+                    <ul>
+                        <li><b>Data Analytics:</b> วิเคราะห์รายได้หรือสถิติโรคระบาดได้แม่นยำ</li>
+                        <li><b>Clinical Decision Support:</b> แจ้งเตือน Drug-Disease Interaction ได้</li>
+                        <li><b>Interoperability:</b> ส่งข้อมูลข้ามโรงพยาบาลได้โดยความหมายไม่ผิดเพี้ยน</li>
+                        <li><b>Insurance:</b> รองรับการเคลมประกันสัตว์เลี้ยงในอนาคต</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button class="modal-trigger-btn" onclick="openModal('snomedModal')">
+                    <span style="font-size: 1.2rem;">🔍</span> ตัวอย่างโครงสร้างข้อมูล SNOMED-CT (Veterinary Subset)
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="sec-9">
+        <div class="container text-center">
+            <h2>เอกสารอ้างอิงและทรัพยากร</h2>
+            <p class="mb-50">ดาวน์โหลดรายการคำศัพท์มาตรฐาน AAHA Diagnostic Terms (อ้างอิงจาก VTSL/SNOMED subset)</p>
+
+            <div id="locked-area" class="locked-container">
+                <p style="margin-bottom: 20px; font-weight: bold; color: var(--ku-gold);">🔒 Restricted Access</p>
+                <p style="font-size: 0.9rem; margin-bottom: 15px;">กรุณากรอกรหัสผ่านเพื่อเข้าถึงไฟล์ดาวน์โหลด</p>
+                <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap;">
+                    <input type="password" id="accessCode" class="pass-input" placeholder="Enter Access Code">
+                    <button onclick="checkAccess()" class="btn-unlock">Unlock Download</button>
+                </div>
+                <p id="error-msg" style="color: var(--danger); display: none; margin-top: 15px; animation: shake 0.3s;">
+                    ⚠️ รหัสผ่านไม่ถูกต้อง (Incorrect Code)</p>
+            </div>
+
+            <div id="download-area" style="display: none;">
+                <a href="aaha-diagnostic-terms.pdf" target="_blank" class="btn-download">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download Diagnostic Terms (PDF)
+                </a>
+                <p style="margin-top: 20px; color: var(--success);">✅ Access Granted</p>
+            </div>
+
+            <p style="margin-top: 50px; font-size: 0.9rem; color: #aaa;">
+                *หมายเหตุ: ไฟล์ PDF เป็นเพียงตัวอย่างรายการคำศัพท์เพื่อการอ้างอิง การนำไปใช้งานจริงในระบบ KAHIS
+                ควรติดต่อขอฐานข้อมูลล่าสุดจาก Veterinary Terminology Services Laboratory (VTSL) โดยตรง
+            </p>
+
+            <footer
+                style="margin-top: 80px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; color: var(--ku-gold-light);">
+                © Kasetsart University Veterinary Teaching Hospital. prepared for KAHIS EMR development reference.
+            </footer>
+        </div>
+    </section>
+
+
+    <div class="modal-overlay" id="snomedModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('snomedModal')">×</span>
+            <h3 style="color: var(--ku-gold);">โครงสร้างข้อมูล SNOMED-CT (Veterinary Subset)</h3>
+            <p>ระบบ KAHIS ควรออกแบบฐานข้อมูลให้รองรับโครงสร้าง 3 ส่วนหลักของ SNOMED ดังนี้:</p>
+
+            <div style="background: #fff; color: #333; padding: 20px; border-radius: 8px; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="background: var(--ku-green-main); color: white;">
+                            <th style="padding: 10px; text-align: left;">Type</th>
+                            <th style="padding: 10px; text-align: left;">Description</th>
+                            <th style="padding: 10px; text-align: left;">Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">1. Concept ID
+                                (รหัส)</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">รหัสตัวเลขที่ไม่ซ้ำกัน ใช้เก็บใน
+                                Database หลังบ้าน</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd; font-family: monospace;">709044004
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">2. Fully
+                                Specified Name (FSN)</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">ชื่อทางเทคนิคที่ไม่กำกวม
+                                มักมีวงเล็บระบุประเภทท้ายคำ</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Calcivirus infection of cat
+                                (disorder)</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">3. Preferred
+                                Term / Synonyms</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">คำที่แสดงให้แพทย์เห็นบนหน้าจอ
+                                และคำพ้องความหมายสำหรับใช้ค้นหา</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">
+                                <b>Preferred:</b> Feline calicivirus infection<br>
+                                <i>Synonyms:</i> Feline calicivirus, FCV
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p style="margin-top: 20px; font-size: 0.9rem;">
+                <b>แนวทางสำหรับ KAHIS:</b> หน้าจอควรมีช่องค้นหาที่รองรับการพิมพ์ Synonyms (เช่น พิมพ์ "FCV")
+                แต่เมื่อบันทึกลงฐานข้อมูล ให้บันทึกเป็น Concept ID เพื่อความเป็นมาตรฐานเดียว
+            </p>
+        </div>
+    </div>
+
+
+    <script>
+        // --- 1. Three.js & Animation Setup ---
+        const canvas = document.querySelector('#bg-canvas');
+        const spacer = document.querySelector('#scroll-spacer');
+        const sections = document.querySelectorAll('.page-section');
+
+        // Scene Setup
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.002); // Deep space fog
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // -- BUILD THE WORLD --
+
+        // A. Grid Floor (The "Path")
+        const gridHelper = new THREE.GridHelper(200, 50, 0x006b38, 0x004526);
+        gridHelper.position.y = -10;
+        gridHelper.scale.z = 5;
+        scene.add(gridHelper);
+
+        // B. Ceiling Grid (Mirror)
+        const ceilingGrid = new THREE.GridHelper(200, 50, 0x006b38, 0x004526);
+        ceilingGrid.position.y = 20;
+        ceilingGrid.scale.z = 5;
+        scene.add(ceilingGrid);
+
+        // C. Particles (Stars / Data bits)
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 1500;
+        const posArray = new Float32Array(particlesCount * 3);
+
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 100; // Spread x/y/z
+        }
+        for (let i = 1; i < particlesCount * 3; i += 3) {
+            posArray[i] = (Math.random() - 0.5) * 50; // Y spread
+        }
+        for (let i = 2; i < particlesCount * 3; i += 3) {
+            posArray[i] = (Math.random() - 0.5) * 600 - 300; // Z depth (long tunnel)
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.15,
+            color: 0xcfa052, /* KU Gold */
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        // D. Station Markers (Glowing Pillars)
+        // We place pillars at specific Z depths corresponding to sections
+        const depthStep = 40; // Every 40 units is a station
+        const pillarGeo = new THREE.CylinderGeometry(0.5, 0.5, 30, 8);
+        const pillarMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true, opacity: 0.3, transparent: true });
+
+        // Generate pillars for sections 1..N (skip 0 cause it's start)
+        for (let i = 1; i < sections.length; i++) {
+            const z = -(i * depthStep);
+
+            const pLeft = new THREE.Mesh(pillarGeo, pillarMat);
+            pLeft.position.set(-15, 0, z);
+            scene.add(pLeft);
+
+            const pRight = new THREE.Mesh(pillarGeo, pillarMat);
+            pRight.position.set(15, 0, z);
+            scene.add(pRight);
+        }
+
+        // initial camera pos
+        camera.position.z = 10;
+        camera.position.y = 2;
+
+
+        // --- 2. GSAP Scroll Logic ---
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Calculate total scroll distance based on spacer height
+        const totalHeight = 10000; // Force tall scroll
+        spacer.style.height = totalHeight + "px";
+
+        // Map scroll range to Camera Z range
+        // We want to walk past all sections. 
+        // Max Z = -(sections.length * depthStep)
+
+        // 1. Move Camera completely synced to scroll
+        gsap.to(camera.position, {
+            z: -(sections.length * depthStep),
+            ease: "none",
+            scrollTrigger: {
+                trigger: document.body,
+                start: "top top",
+                end: "bottom bottom",
+                scrub: 1
+            }
+        });
+
+        // 2. Section Transitions logic
+        // We use absolute scroll positions derived from totalHeight
+        const segmentInPx = totalHeight / sections.length;
+
+        sections.forEach((sec, i) => {
+            // Define when this section should show up
+            // i=0 (Intro): Show from 0 to segment
+            // i=1 (Principles): Show from segment*1 to segment*2
+
+            const startScroll = (i * segmentInPx) - (segmentInPx * 0.3); // Appear slightly before we arrive
+            const endScroll = startScroll + segmentInPx;
+
+            ScrollTrigger.create({
+                trigger: document.body,
+                // First section starts visible immediately
+                start: (i === 0) ? 0 : startScroll,
+                end: endScroll,
+                onEnter: () => fadeIn(sec),
+                onEnterBack: () => fadeIn(sec),
+                onLeave: () => fadeOut(sec, 'up'),
+                onLeaveBack: () => fadeOut(sec, 'down'),
+                // markers: true // Toggle for debug
+            });
+        });
+
+        function fadeIn(el) {
+            el.classList.add('active');
+            el.classList.remove('hidden-up', 'hidden-down');
+            el.style.pointerEvents = 'auto'; // Restore interactivity
+            // Force reset transform/opacity
+            gsap.to(el, { opacity: 1, scale: 1, y: 0, duration: 0.5, overwrite: true });
+        }
+
+        function fadeOut(el, direction) {
+            el.classList.remove('active');
+            const yOffset = direction === 'up' ? -50 : 50;
+            el.style.pointerEvents = 'none';
+            gsap.to(el, { opacity: 0, scale: 0.9, y: yOffset, duration: 0.5, overwrite: true });
+        }
+
+
+        // --- 3. Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Subtle idle animation
+            particlesMesh.rotation.z += 0.0005;
+            camera.rotation.z = Math.sin(Date.now() * 0.0005) * 0.02; // Gentle hover sway
+
+            // Mouse Parallax (Optional)
+            // camera.position.x += (mouseX - camera.position.x) * 0.01;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Resize Helper
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+
+        // --- 4. Legacy Logic (Preserved) ---
+
+        // Navigation Buttons (Adapted)
+        window.scrollToNext = function () {
+            window.scrollBy({ top: window.innerHeight * 1.5, behavior: 'smooth' });
+        }
+        window.scrollToPrev = function () {
+            window.scrollBy({ top: -window.innerHeight * 1.5, behavior: 'smooth' });
+        }
+
+        // Expandable Card Logic
+        window.toggleExpand = function (card) {
+            card.classList.toggle('active');
+        }
+
+        // Audit Trail Simulation Logic
+        window.runAuditSim = function () {
+            const simContainer = document.getElementById('auditSim');
+            const btn = document.getElementById('auditBtn');
+
+            if (btn.innerText.includes("Reset")) {
+                simContainer.innerHTML = `
+                    <div class="audit-log-entry">
+                        <div class="audit-meta">
+                            <span>User: Dr.Vipa (Vet ID: V055)</span>
+                            <span>Timestamp: 2024-05-20 09:30:15 (Server Time)</span>
+                            <span>Action: Create</span>
+                        </div>
+                        <div class="audit-data">
+                            P: จ่ายยา Amoxicillin 250mg, 1 tab, PO, bid (จำนวน 14 เม็ด)
+                        </div>
+                    </div>
+                `;
+                btn.innerText = "▶ จำลองเหตุการณ์: เมื่อหมอกลับมาแก้ไขข้อมูลภายหลัง";
+                btn.style.borderColor = "var(--ku-gold)";
+                btn.style.color = "var(--ku-gold)";
+            } else {
+                const originalData = simContainer.querySelector('.audit-data');
+                originalData.classList.add('modified');
+                originalData.innerHTML += ' <span style="font-size:0.8rem;">[Modified]</span>';
+
+                const newEntry = document.createElement('div');
+                newEntry.className = 'audit-log-entry';
+                newEntry.style.animation = 'fadeIn 0.5s';
+                newEntry.innerHTML = `
+                    <div class="audit-meta" style="color: var(--success);">
+                        <span>User: Dr.Vipa (Vet ID: V055)</span>
+                        <span>Timestamp: 2024-05-20 09:35:45 (Server Time)</span>
+                        <span>Action: Update (Reason: Wrong Dose entry)</span>
+                    </div>
+                    <div class="audit-data new">
+                        P: แก้ไขเป็น -> จ่ายยา Amoxicillin 500mg, 1 tab, PO, bid (จำนวน 14 เม็ด)
+                    </div>
+                `;
+                setTimeout(() => {
+                    simContainer.appendChild(newEntry);
+                    btn.innerText = "↺ Reset Simulation";
+                    btn.style.borderColor = "#888";
+                    btn.style.color = "#888";
+                }, 300);
+            }
+        }
+
+        // Modal Logic
+        window.openModal = function (modalId) {
+            document.getElementById(modalId).classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        window.closeModal = function (modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        window.onclick = function (event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // Password Protection Logic (NEW)
+        window.checkAccess = function () {
+            const input = document.getElementById('accessCode');
+            const errorMsg = document.getElementById('error-msg');
+            const correctCode = "53027918";
+
+            if (input.value === correctCode) {
+                // Unlock
+                document.getElementById('locked-area').style.display = 'none';
+                document.getElementById('download-area').style.display = 'block';
+            } else {
+                // Show Error
+                errorMsg.style.display = 'block';
+                input.value = '';
+                input.focus();
+
+                // Remove animation class and re-add to trigger shake again
+                errorMsg.style.animation = 'none';
+                errorMsg.offsetHeight; /* trigger reflow */
+                errorMsg.style.animation = 'shake 0.3s';
+            }
+        }
+
+        // Allow "Enter" key to submit password
+        document.getElementById('accessCode')?.addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                checkAccess();
+            }
+        });
+
+        // Force scroll reset
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        window.onbeforeunload = function () {
+            window.scrollTo(0, 0);
+        }
+
+    </script>
+</body>
+
+</html>
